@@ -75,7 +75,7 @@ export default function RootLayout({
         </ClerkProvider>
         {/* Global GoHighLevel Form Script */}
         <script src="https://link.msgsndr.com/js/form_embed.js" defer></script>
-        <script src="https://swiftfill-sigma.vercel.app/widget.js?v=3" defer></script>
+        {/* <script src="https://swiftfill-sigma.vercel.app/widget.js?v=3" defer></script> */}
 
       </body>
     </html>
