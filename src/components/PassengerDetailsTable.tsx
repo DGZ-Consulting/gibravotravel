@@ -14,6 +14,7 @@ import usePassengerServiceDetails, { PassengerServiceUpdatePayload, PassengerSer
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Modal } from "@/components/ui/modal";
 import {
   Popover,
   PopoverContent,
@@ -148,6 +149,9 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
   const [tempNotas, setTempNotas] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkNotasValue, setBulkNotasValue] = useState('');
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [bulkPayload, setBulkPayload] = useState<{ ids: string[]; note: string } | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof PassengerServiceDetail; direction: 'asc' | 'desc' } | null>({
     key: 'dataRegistro',
     direction: 'asc',
@@ -205,8 +209,19 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
       setTempNotas('');
       setSelectedIds(new Set());
       setBulkNotasValue('');
+      setFeedback(null);
+      setIsBulkConfirmOpen(false);
+      setBulkPayload(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => {
+      setFeedback(null);
+    }, 2800);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
 
   useEffect(() => {
     if (!canEditEstado) {
@@ -498,7 +513,10 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
       await updateDetail(id, payload);
       setEditingEstadoId(null);
     } catch (err) {
-      alert((err as Error)?.message || "Errore durante l'aggiornamento dello stato");
+      setFeedback({
+        type: 'error',
+        message: (err as Error)?.message || "Errore durante l'aggiornamento dello stato",
+      });
     }
   };
 
@@ -519,7 +537,10 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
         setTempFechaActivacion('');
       }
     } catch (err) {
-      alert((err as Error)?.message || "Errore durante l'aggiornamento della data");
+      setFeedback({
+        type: 'error',
+        message: (err as Error)?.message || "Errore durante l'aggiornamento della data",
+      });
     }
   };
 
@@ -531,7 +552,10 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
       setEditingNotasId(null);
       setTempNotas('');
     } catch (err) {
-      alert((err as Error)?.message || "Errore durante l'aggiornamento delle note");
+      setFeedback({
+        type: 'error',
+        message: (err as Error)?.message || "Errore durante l'aggiornamento delle note",
+      });
     }
   };
 
@@ -540,32 +564,45 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
 
     const ids = Array.from(selectedIds);
     if (ids.length === 0) {
-      alert('Seleziona almeno una riga prima di applicare la nota.');
+      setFeedback({
+        type: 'error',
+        message: 'Seleziona almeno una riga prima di applicare la nota.',
+      });
       return;
     }
 
     const normalizedNote = bulkNotasValue.trim();
-    const actionLabel = normalizedNote ? 'applicare' : 'svuotare';
-    const shouldContinue = window.confirm(
-      `Confermi di ${actionLabel} la NOTE su ${ids.length} record selezionati?`
-    );
+    setBulkPayload({ ids, note: normalizedNote ? normalizedNote : '' });
+    setIsBulkConfirmOpen(true);
+  };
 
-    if (!shouldContinue) return;
-
+  const handleConfirmBulkNotas = async () => {
+    if (!bulkPayload) return;
     try {
       const result = await updateNotasBulk({
-        ids,
-        notas: normalizedNote ? normalizedNote : '',
+        ids: bulkPayload.ids,
+        notas: bulkPayload.note,
       });
       setSelectedIds(new Set());
       setBulkNotasValue('');
+      setIsBulkConfirmOpen(false);
+      setBulkPayload(null);
       if (result.updated === 0) {
-        alert('Nessun record aggiornato. Verifica la selezione e riprova.');
+        setFeedback({
+          type: 'error',
+          message: 'Nessun record aggiornato. Verifica la selezione e riprova.',
+        });
       } else {
-        alert(`NOTE aggiornate con successo: ${result.updated} record.`);
+        setFeedback({
+          type: 'success',
+          message: `NOTE aggiornate con successo: ${result.updated} record.`,
+        });
       }
     } catch (err) {
-      alert((err as Error)?.message || 'Errore durante l\'aggiornamento note in blocco');
+      setFeedback({
+        type: 'error',
+        message: (err as Error)?.message || "Errore durante l'aggiornamento note in blocco",
+      });
     }
   };
 
@@ -1331,6 +1368,54 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={isBulkConfirmOpen}
+        onClose={() => {
+          setIsBulkConfirmOpen(false);
+          setBulkPayload(null);
+        }}
+        className="max-w-md p-6"
+      >
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Conferma aggiornamento NOTE
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {bulkPayload?.note
+              ? `Applicherai la stessa nota a ${bulkPayload.ids.length} record selezionati.`
+              : `Svuoterai la NOTE su ${bulkPayload?.ids.length ?? 0} record selezionati.`}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBulkConfirmOpen(false);
+                setBulkPayload(null);
+              }}
+            >
+              Annulla
+            </Button>
+            <Button onClick={handleConfirmBulkNotas} disabled={isUpdating}>
+              Conferma
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {feedback && (
+        <div className="fixed top-6 right-6 z-[99999999999]">
+          <div
+            className={`rounded-lg px-4 py-3 shadow-lg text-sm font-medium ${
+              feedback.type === 'success'
+                ? 'bg-green-600 text-white'
+                : 'bg-red-600 text-white'
+            }`}
+          >
+            {feedback.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 
