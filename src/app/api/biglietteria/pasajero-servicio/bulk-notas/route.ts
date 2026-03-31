@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const notasValue =
-      typeof body.notas === 'string' ? body.notas.trim() || null : body.notas === null ? null : null;
+      typeof body.notas === 'string' ? body.notas : body.notas === null ? '' : '';
 
     const result = await prisma.pasajeroServicioBiglietteria.updateMany({
       where: {

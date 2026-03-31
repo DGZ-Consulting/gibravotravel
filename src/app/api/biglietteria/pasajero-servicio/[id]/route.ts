@@ -70,7 +70,12 @@ export async function PATCH(
     }
 
     if (body.notas !== undefined) {
-      updateData.notas = body.notas || null;
+      if (typeof body.notas === 'string') {
+        updateData.notas = body.notas;
+      } else if (body.notas === null) {
+        // Use empty string to explicitly clear note and avoid fallback display.
+        updateData.notas = '';
+      }
     }
 
     if (body.metodoDiAcquisto !== undefined) {

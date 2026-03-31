@@ -417,7 +417,7 @@ const PassengerDetailsTableSimple: React.FC<PassengerDetailsTableSimpleProps> = 
     if (!canEditNotas) return;
     try {
       const value = tempNotas.trim();
-      await updateDetail(id, { notas: value ? value : null });
+      await updateDetail(id, { notas: value ? value : '' });
       setEditingNotasId(null);
       setTempNotas('');
     } catch (err) {

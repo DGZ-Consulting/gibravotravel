@@ -527,7 +527,7 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
     if (!canEditNotas) return;
     try {
       const value = tempNotas.trim();
-      await updateDetail(id, { notas: value ? value : null });
+      await updateDetail(id, { notas: value ? value : '' });
       setEditingNotasId(null);
       setTempNotas('');
     } catch (err) {
@@ -555,7 +555,7 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
     try {
       const result = await updateNotasBulk({
         ids,
-        notas: normalizedNote ? normalizedNote : null,
+        notas: normalizedNote ? normalizedNote : '',
       });
       setSelectedIds(new Set());
       setBulkNotasValue('');
