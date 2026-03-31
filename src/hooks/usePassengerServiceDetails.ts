@@ -69,6 +69,11 @@ export interface PassengerServiceUpdatePayload {
   venduto?: number | null;
 }
 
+export interface PassengerServiceBulkNotesPayload {
+  ids: string[];
+  notas: string | null;
+}
+
 const mapApiItemToDetail = (item: PassengerServiceDetailApi): PassengerServiceDetail => ({
   id: item.id,
   pasajeroServicioId: item.id,
@@ -179,12 +184,41 @@ export const usePassengerServiceDetails = (
     [fetchDetails]
   );
 
+  const updateNotasBulk = useCallback(
+    async (payload: PassengerServiceBulkNotesPayload) => {
+      try {
+        setIsUpdating(true);
+        const response = await fetch('/api/biglietteria/pasajero-servicio/bulk-notas', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorBody = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(errorBody.error || 'Error al actualizar las notas en lote');
+        }
+
+        await fetchDetails();
+      } catch (err) {
+        console.error('Error bulk-updating notes:', err);
+        throw err;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [fetchDetails]
+  );
+
   return {
     details,
     loading,
     error,
     refresh: fetchDetails,
     updateDetail,
+    updateNotasBulk,
     isUpdating,
   };
 };

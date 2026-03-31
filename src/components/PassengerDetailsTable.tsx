@@ -103,7 +103,7 @@ interface PassengerDetailsTableProps {
 }
 
 const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, onClose }) => {
-  const { details, loading, error, updateDetail, isUpdating } = usePassengerServiceDetails(isOpen, { pageSize: 4000 });
+  const { details, loading, error, updateDetail, updateNotasBulk, isUpdating } = usePassengerServiceDetails(isOpen, { pageSize: 4000 });
   const { userRole, isLoading: roleLoading, isAdmin, isTI } = useUserRole();
   const canEditEstado = !roleLoading && (isAdmin || isTI);
   const canEditFechaPago = canEditEstado;
@@ -146,6 +146,8 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
   const [tempFechaPago, setTempFechaPago] = useState<string>('');
   const [tempFechaActivacion, setTempFechaActivacion] = useState<string>('');
   const [tempNotas, setTempNotas] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkNotasValue, setBulkNotasValue] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof PassengerServiceDetail; direction: 'asc' | 'desc' } | null>({
     key: 'dataRegistro',
     direction: 'asc',
@@ -201,6 +203,8 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
       setTempFechaPago('');
       setTempFechaActivacion('');
       setTempNotas('');
+      setSelectedIds(new Set());
+      setBulkNotasValue('');
     }
   }, [isOpen]);
 
@@ -411,6 +415,50 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
   const totalNeto = filteredData.reduce((sum, item) => sum + (item.neto || 0), 0);
   const totalVenduto = filteredData.reduce((sum, item) => sum + (item.venduto || 0), 0);
 
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const allowed = new Set(filteredData.map((item) => item.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (allowed.has(id)) {
+          next.add(id);
+        }
+      });
+      if (next.size === prev.size) return prev;
+      return next;
+    });
+  }, [filteredData]);
+
+  const visibleIds = currentData.map((item) => item.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id));
+
+  const handleToggleVisibleSelection = (checked: boolean | 'indeterminate') => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        visibleIds.forEach((id) => next.add(id));
+      } else {
+        visibleIds.forEach((id) => next.delete(id));
+      }
+      return next;
+    });
+  };
+
+  const handleToggleRowSelection = (id: string, checked: boolean | 'indeterminate') => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
   const exportToExcel = () => {
     const dataToExport = filteredData.map(item => ({
       Cliente: item.cliente,
@@ -484,6 +532,35 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
       setTempNotas('');
     } catch (err) {
       alert((err as Error)?.message || "Errore durante l'aggiornamento delle note");
+    }
+  };
+
+  const handleApplyBulkNotas = async () => {
+    if (!canEditNotas) return;
+
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      alert('Seleziona almeno una riga prima di applicare la nota.');
+      return;
+    }
+
+    const normalizedNote = bulkNotasValue.trim();
+    const actionLabel = normalizedNote ? 'applicare' : 'svuotare';
+    const shouldContinue = window.confirm(
+      `Confermi di ${actionLabel} la NOTE su ${ids.length} record selezionati?`
+    );
+
+    if (!shouldContinue) return;
+
+    try {
+      await updateNotasBulk({
+        ids,
+        notas: normalizedNote ? normalizedNote : null,
+      });
+      setSelectedIds(new Set());
+      setBulkNotasValue('');
+    } catch (err) {
+      alert((err as Error)?.message || 'Errore durante l\'aggiornamento note in blocco');
     }
   };
 
@@ -738,6 +815,23 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
             </div>
 
             <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+              <div className="flex items-center gap-2 w-full lg:w-auto">
+                <input
+                  type="text"
+                  value={bulkNotasValue}
+                  onChange={(e) => setBulkNotasValue(e.target.value)}
+                  placeholder="Testo NOTE da applicare ai selezionati"
+                  className="w-full lg:w-72 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                <button
+                  onClick={handleApplyBulkNotas}
+                  disabled={selectedIds.size === 0 || isUpdating}
+                  className="px-4 py-2 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Applica la stessa NOTE ai record selezionati"
+                >
+                  Applica NOTE ({selectedIds.size})
+                </button>
+              </div>
               <button
                 onClick={() => {
                   setSearchTerm('');
@@ -779,6 +873,17 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
                 <Table>
                   <TableHeader className="bg-gray-700">
                     <TableRow className="bg-gray-700 border-b-2 border-gray-600">
+                      <TableCell
+                        isHeader={true}
+                        className="bg-gray-700 text-white uppercase tracking-wide text-xs font-bold py-3 px-3"
+                        style={{ position: 'sticky', top: 0, zIndex: 50 }}
+                      >
+                        <Checkbox
+                          checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                          onCheckedChange={handleToggleVisibleSelection}
+                          aria-label="Seleziona righe visibili"
+                        />
+                      </TableCell>
                       {[
                         { label: 'Cliente', key: 'cliente' },
                         { label: 'Pagamento', key: 'pagamento' },
@@ -840,19 +945,19 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={20} className="py-12 text-center text-gray-500 dark:text-gray-400">
+                        <TableCell colSpan={21} className="py-12 text-center text-gray-500 dark:text-gray-400">
                           Caricamento dettagli...
                         </TableCell>
                       </TableRow>
                     ) : error ? (
                       <TableRow>
-                        <TableCell colSpan={20} className="py-12 text-center text-red-500">
+                        <TableCell colSpan={21} className="py-12 text-center text-red-500">
                           {error}
                         </TableCell>
                       </TableRow>
                     ) : currentData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={20} className="py-12 text-center text-gray-500 dark:text-gray-400">
+                        <TableCell colSpan={21} className="py-12 text-center text-gray-500 dark:text-gray-400">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -863,6 +968,13 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
                           className={`hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors duration-200 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-700/50'
                             }`}
                         >
+                          <TableCell className="py-2 px-3 text-xs">
+                            <Checkbox
+                              checked={selectedIds.has(item.id)}
+                              onCheckedChange={(checked) => handleToggleRowSelection(item.id, checked)}
+                              aria-label={`Seleziona record ${item.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="py-2 px-3 text-xs text-gray-700 dark:text-gray-300">
                             {item.cliente}
                           </TableCell>
@@ -1117,7 +1229,7 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
 
                     {!loading && !error && currentData.length > 0 && (
                       <TableRow className="bg-purple-50 dark:bg-purple-900/20 border-t-2 border-purple-200 dark:border-purple-700">
-                        <TableCell colSpan={5} className="py-2 px-3 text-left font-semibold text-purple-800 dark:text-purple-200 text-xs">
+                        <TableCell colSpan={6} className="py-2 px-3 text-left font-semibold text-purple-800 dark:text-purple-200 text-xs">
                           Totali filtrati
                         </TableCell>
                         <TableCell className="py-2 px-3 text-right text-sm font-bold text-purple-900 dark:text-purple-100">
@@ -1129,7 +1241,7 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
                         <TableCell className="py-2 px-3 text-right text-sm font-bold text-purple-900 dark:text-purple-100">
                           {formatCurrency(totalVenduto)}
                         </TableCell>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={7}>
                           &nbsp;
                         </TableCell>
                       </TableRow>
