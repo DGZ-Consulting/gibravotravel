@@ -553,15 +553,33 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
     if (!shouldContinue) return;
 
     try {
-      await updateNotasBulk({
+      const result = await updateNotasBulk({
         ids,
         notas: normalizedNote ? normalizedNote : null,
       });
       setSelectedIds(new Set());
       setBulkNotasValue('');
+      if (result.updated === 0) {
+        alert('Nessun record aggiornato. Verifica la selezione e riprova.');
+      } else {
+        alert(`NOTE aggiornate con successo: ${result.updated} record.`);
+      }
     } catch (err) {
       alert((err as Error)?.message || 'Errore durante l\'aggiornamento note in blocco');
     }
+  };
+
+  const handleSelectVisibleRows = () => {
+    if (visibleIds.length === 0) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      visibleIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
   };
 
   if (!isOpen) return null;
@@ -815,6 +833,25 @@ const PassengerDetailsTable: React.FC<PassengerDetailsTableProps> = ({ isOpen, o
             </div>
 
             <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+              <span className="text-xs text-gray-600 dark:text-gray-300">
+                Selezionati: <strong>{selectedIds.size}</strong>
+              </span>
+              <button
+                onClick={handleSelectVisibleRows}
+                disabled={visibleIds.length === 0}
+                className="px-3 py-2 text-xs font-medium border border-blue-300 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-700 dark:text-blue-300 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+                title="Seleziona tutte le righe visibili in questa pagina"
+              >
+                Seleziona visibili
+              </button>
+              <button
+                onClick={handleClearSelection}
+                disabled={selectedIds.size === 0}
+                className="px-3 py-2 text-xs font-medium border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+                title="Annulla la selezione corrente"
+              >
+                Deseleziona
+              </button>
               <div className="flex items-center gap-2 w-full lg:w-auto">
                 <input
                   type="text"
