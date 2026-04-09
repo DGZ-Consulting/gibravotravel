@@ -16,6 +16,7 @@ import {
   toNumberOrNull,
   toNullableString,
 } from '@/lib/biglietteria/parsers';
+import { logCambioEstadoPago } from '@/lib/auditoria/log-cambio-estado-pago';
 
 const pasajeroServiciosInclude = Prisma.validator<Prisma.PasajeroBiglietteriaInclude>()({
   serviciosDetalle: true
@@ -302,6 +303,14 @@ export async function PUT(
         },
       });
 
+      await logCambioEstadoPago(tx, request, userId, {
+        tipoVenta: 'biglietteria',
+        registroId: id,
+        nombreCliente: existingRecord.cliente || '(sin cliente)',
+        estadoAnterior: existingRecord.pagamento,
+        estadoNuevo: pagamento,
+      });
+
       if (pasajerosParaCrear.length > 0) {
         for (const pasajeroData of pasajerosParaCrear) {
           const { serviciosDetalle, ...pasajeroCampos } = pasajeroData;
@@ -425,6 +434,16 @@ export async function PATCH(
         }
       }
     });
+
+    if (body.pagamento !== undefined) {
+      await logCambioEstadoPago(prisma, request, userId, {
+        tipoVenta: 'biglietteria',
+        registroId: id,
+        nombreCliente: existingRecord.cliente || '(sin cliente)',
+        estadoAnterior: existingRecord.pagamento,
+        estadoNuevo: String(body.pagamento),
+      });
+    }
 
     return NextResponse.json({
       record,

@@ -27,6 +27,21 @@ interface AuditoriaRegistro {
   userAgent: string | null;
 }
 
+interface AuditoriaCambioPagoRegistro {
+  id: string;
+  tipoVenta: string;
+  registroId: string;
+  nombreCliente: string;
+  estadoAnterior: string;
+  estadoNuevo: string;
+  usuarioId: string;
+  usuarioNombre: string | null;
+  usuarioEmail: string | null;
+  fechaCambio: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
 export default function AuditoriaPage() {
   const { userRole, isLoading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
@@ -34,11 +49,22 @@ export default function AuditoriaPage() {
   const [error, setError] = useState<string | null>(null);
   const [filtroTipo, setFiltroTipo] = useState<string>("");
 
+  const [loadingPago, setLoadingPago] = useState(true);
+  const [registrosPago, setRegistrosPago] = useState<AuditoriaCambioPagoRegistro[]>([]);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
+  const [filtroTipoPago, setFiltroTipoPago] = useState<string>("");
+
   useEffect(() => {
     if (!roleLoading) {
       fetchRegistros();
     }
   }, [roleLoading, filtroTipo]);
+
+  useEffect(() => {
+    if (!roleLoading) {
+      fetchCambiosPago();
+    }
+  }, [roleLoading, filtroTipoPago]);
 
   const fetchRegistros = async () => {
     setLoading(true);
@@ -63,6 +89,32 @@ export default function AuditoriaPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCambiosPago = async () => {
+    setLoadingPago(true);
+    setErrorPago(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (filtroTipoPago) {
+        params.append('tipoVenta', filtroTipoPago);
+      }
+
+      const response = await fetch(`/api/auditoria/cambio-estado-pago?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error('Error al cargar auditoría de estado de pago');
+      }
+
+      const data = await response.json();
+      setRegistrosPago(data.registros || []);
+    } catch (err) {
+      setErrorPago('Error al cargar la auditoría de cambios de estado de pago');
+      console.error(err);
+    } finally {
+      setLoadingPago(false);
     }
   };
 
@@ -115,11 +167,14 @@ export default function AuditoriaPage() {
     );
   }
 
+  const truncId = (id: string) =>
+    id.length > 12 ? `${id.substring(0, 12)}…` : id;
+
   return (
     <div>
-      <PageBreadcrumb pageTitle="Auditoría de Eliminaciones" />
+      <PageBreadcrumb pageTitle="Auditoría" />
       
-      <ComponentCard title="Registros de Auditoría">
+      <ComponentCard title="Auditoría de eliminaciones">
         {/* Filtros */}
         <div className="mb-6 flex gap-4 items-center">
           <div className="flex-1">
@@ -210,7 +265,7 @@ export default function AuditoriaPage() {
                       {registro.usuarioEmail || 'N/A'}
                     </TableCell>
                     <TableCell className="px-5 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
-                      {registro.registroId.substring(0, 12)}...
+                      {truncId(registro.registroId)}
                     </TableCell>
                     <TableCell className="px-5 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
                       {registro.ipAddress || 'N/A'}
@@ -228,6 +283,130 @@ export default function AuditoriaPage() {
           </div>
         )}
       </ComponentCard>
+
+      <div className="mt-8">
+        <ComponentCard title="Auditoría de cambios de estado de pago">
+          <div className="mb-6 flex gap-4 items-center">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Filtrar por tipo de venta:
+              </label>
+              <select
+                value={filtroTipoPago}
+                onChange={(e) => setFiltroTipoPago(e.target.value)}
+                className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              >
+                <option value="">Todos los tipos</option>
+                <option value="biglietteria">Biglietteria</option>
+                <option value="tour_aereo">Tour Aereo</option>
+                <option value="tour_bus">Tour Bus</option>
+              </select>
+            </div>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={fetchCambiosPago}
+                className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors"
+              >
+                Actualizar
+              </button>
+            </div>
+          </div>
+
+          {errorPago && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-800 dark:text-red-200">{errorPago}</p>
+            </div>
+          )}
+
+          {loadingPago ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
+            </div>
+          ) : registrosPago.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 dark:text-gray-400">
+                No hay cambios de estado de pago registrados.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Fecha y Hora
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Tipo de Venta
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Cliente
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Estado anterior
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Estado nuevo
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Usuario
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      Email
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      ID Registro
+                    </TableCell>
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
+                      IP
+                    </TableCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {registrosPago.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100">
+                        {formatFecha(r.fechaCambio)}
+                      </TableCell>
+                      <TableCell className="px-5 py-3">
+                        {getTipoVentaBadge(r.tipoVenta)}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100 font-medium">
+                        {r.nombreCliente}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100">
+                        {r.estadoAnterior || '—'}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100 font-medium">
+                        {r.estadoNuevo || '—'}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100">
+                        {r.usuarioNombre || 'N/A'}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-900 dark:text-gray-100">
+                        {r.usuarioEmail || 'N/A'}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                        {truncId(r.registroId)}
+                      </TableCell>
+                      <TableCell className="px-5 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                        {r.ipAddress || 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {registrosPago.length > 0 && (
+            <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              Total de registros: {registrosPago.length}
+            </div>
+          )}
+        </ComponentCard>
+      </div>
     </div>
   );
 }

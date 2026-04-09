@@ -829,6 +829,27 @@ model AuditoriaEliminacion {
   @@map("auditoria_eliminaciones")
 }
 
+model AuditoriaCambioEstadoPago {
+  id             String   @id @default(cuid())
+  tipoVenta      String // biglietteria | tour_aereo | tour_bus
+  registroId     String
+  nombreCliente  String
+  estadoAnterior String
+  estadoNuevo    String
+  usuarioId      String
+  usuarioNombre  String?
+  usuarioEmail   String?
+  fechaCambio    DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+
+  @@index([tipoVenta], map: "idx_auditoria_pago_tipo_venta")
+  @@index([registroId], map: "idx_auditoria_pago_registro_id")
+  @@index([usuarioId], map: "idx_auditoria_pago_usuario_id")
+  @@index([fechaCambio], map: "idx_auditoria_pago_fecha")
+  @@map("auditoria_cambios_estado_pago")
+}
+
 // --- WEB BOOKING SYSTEM (SEPARATE FROM INTERNAL AGENT SYSTEM) ---
 
 model WebBooking {

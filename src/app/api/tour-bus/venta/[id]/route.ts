@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { logCambioEstadoPago } from '@/lib/auditoria/log-cambio-estado-pago';
 import { v2 as cloudinary } from 'cloudinary';
 import type { UploadApiResponse } from 'cloudinary';
 
@@ -278,6 +279,14 @@ export async function PUT(
           numeroAcompanantes: acompanantes?.length || 0,
           numeroCuotas: cuotas?.length || null,
         }
+      });
+
+      await logCambioEstadoPago(tx, request, userId, {
+        tipoVenta: 'tour_bus',
+        registroId: id,
+        nombreCliente: existingVenta.clienteNombre || '(sin cliente)',
+        estadoAnterior: existingVenta.estadoPago,
+        estadoNuevo: String(estadoPago ?? ''),
       });
 
       // 4. Marcar el asiento principal como vendido

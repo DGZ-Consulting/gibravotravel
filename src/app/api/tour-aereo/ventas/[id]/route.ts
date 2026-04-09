@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { logCambioEstadoPago } from '@/lib/auditoria/log-cambio-estado-pago';
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configurar Cloudinary
@@ -103,10 +104,21 @@ export async function PATCH(
       }
     }
 
+    const estadoAnterior = venta.stato;
     const ventaActualizada = await prisma.ventaTourAereo.update({
       where: { id: ventaId },
       data: updateData
     });
+
+    if (stato !== undefined) {
+      await logCambioEstadoPago(prisma, request, userId, {
+        tipoVenta: 'tour_aereo',
+        registroId: ventaId,
+        nombreCliente: venta.pasajero || '(pasajero)',
+        estadoAnterior,
+        estadoNuevo: String(stato),
+      });
+    }
 
     return NextResponse.json({ venta: ventaActualizada });
 
@@ -322,9 +334,18 @@ export async function PUT(
       updatePayload.polizza = sanitizedPolizza === '' ? null : parseFloat(sanitizedPolizza);
     }
 
+    const estadoAnteriorStato = venta.stato;
     const ventaActualizada = await prisma.ventaTourAereo.update({
       where: { id: ventaId },
       data: updatePayload,
+    });
+
+    await logCambioEstadoPago(prisma, request, userId, {
+      tipoVenta: 'tour_aereo',
+      registroId: ventaId,
+      nombreCliente: venta.pasajero || '(pasajero)',
+      estadoAnterior: estadoAnteriorStato,
+      estadoNuevo: stato,
     });
 
     // Actualizar cuotas si se proporcionan
