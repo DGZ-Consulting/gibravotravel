@@ -219,6 +219,11 @@ const utentiItems: NavItem[] = [
   },
   {
     icon: <TableIcon />,
+    name: "Acquisto",
+    path: "/acquisto",
+  },
+  {
+    icon: <TableIcon />,
     name: "Database Admin",
     path: "/database-admin",
   },
