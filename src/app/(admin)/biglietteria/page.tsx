@@ -17,6 +17,17 @@ import PassengerDetailsTableSimple from "@/components/PassengerDetailsTableSimpl
 import SimpleRichTextEditor from "@/components/form/SimpleRichTextEditor";
 import * as XLSX from "xlsx";
 import { cachedFetch, getCachedData } from "@/utils/cachedFetch";
+
+/** Solo riga TOTALI Biglietteria: numeri → es. 65.526,20 € */
+function formatEuroTotaleBiglietteria(n: number): string {
+  if (typeof n !== "number" || Number.isNaN(n)) return "-";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  const [intRaw, frac = "00"] = abs.toFixed(2).split(".");
+  const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${sign}${intPart},${frac} €`;
+}
+
 // ==================== INTERFACES ====================
 
 interface Cuota {
@@ -733,31 +744,6 @@ export default function BiglietteriaPage() {
   // Función para obtener servicios que requieren campos dinámicos
   const obtenerServiciosDinamicos = (servicios: string[]): string[] => {
     return servicios.filter((s) => !esServicioConocido(s));
-  };
-
-  /** Italiano: migliaia con punto, decimali con virgola, simbolo in coda (es. 65.526,20 €).
-   *  Non usiamo solo Intl perché su alcuni browser/OS l’EUR può ancora uscire come €65526.20. */
-  const formatCurrencyDisplay = (
-    value: number | string | null | undefined,
-  ): string => {
-    if (value === null || value === undefined || value === "") {
-      return "-";
-    }
-    let n: number;
-    if (typeof value === "string") {
-      const t = value.trim().replace(/\s/g, "").replace(",", ".");
-      n = Number(t);
-    } else {
-      n = value;
-    }
-    if (Number.isNaN(n)) {
-      return "-";
-    }
-    const sign = n < 0 ? "-" : "";
-    const abs = Math.abs(n);
-    const [intRaw, frac = "00"] = abs.toFixed(2).split(".");
-    const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return `${sign}${intPart},${frac} €`;
   };
 
   const formatDateDisplay = (
@@ -3492,17 +3478,17 @@ export default function BiglietteriaPage() {
                     <td className="w-[120px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate">
                       {record.itinerario}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
-                      {formatCurrencyDisplay(record.netoPrincipal)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
+                      €{record.netoPrincipal.toFixed(2)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
-                      {formatCurrencyDisplay(record.vendutoTotal)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
+                      €{record.vendutoTotal.toFixed(2)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
-                      {formatCurrencyDisplay(record.acconto)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
+                      €{record.acconto.toFixed(2)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
-                      {formatCurrencyDisplay(record.daPagare)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
+                      €{record.daPagare.toFixed(2)}
                     </td>
                     <td className="w-[100px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate">
                       {(() => {
@@ -3629,8 +3615,8 @@ export default function BiglietteriaPage() {
                         </div>
                       )}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
-                      {formatCurrencyDisplay(record.feeAgv)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
+                      €{record.feeAgv.toFixed(2)}
                     </td>
 
                     {/* Columna Files */}
@@ -3779,16 +3765,16 @@ export default function BiglietteriaPage() {
                     TOTAL:
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatCurrencyDisplay(totales.totalNeto)}
+                    {formatEuroTotaleBiglietteria(Number(totales.totalNeto))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatCurrencyDisplay(totales.totalVenduto)}
+                    {formatEuroTotaleBiglietteria(Number(totales.totalVenduto))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatCurrencyDisplay(totales.totalAcconto)}
+                    {formatEuroTotaleBiglietteria(Number(totales.totalAcconto))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatCurrencyDisplay(totales.totalDaPagare)}
+                    {formatEuroTotaleBiglietteria(Number(totales.totalDaPagare))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     -
@@ -3797,7 +3783,7 @@ export default function BiglietteriaPage() {
                     -
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatCurrencyDisplay(totales.totalFeeAgv)}
+                    {formatEuroTotaleBiglietteria(Number(totales.totalFeeAgv))}
                   </td>
                   <td
                     colSpan={3}
@@ -5447,7 +5433,7 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={formatCurrencyDisplay(formData.netoPrincipal)}
+                      value={`€${formData.netoPrincipal}`}
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
@@ -5459,7 +5445,7 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={formatCurrencyDisplay(formData.vendutoTotal)}
+                      value={`€${formData.vendutoTotal}`}
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
@@ -5489,7 +5475,7 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={formatCurrencyDisplay(formData.daPagare)}
+                      value={`€${formData.daPagare}`}
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
@@ -5503,7 +5489,7 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={formatCurrencyDisplay(formData.feeAgv)}
+                      value={`€${formData.feeAgv}`}
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
@@ -6192,7 +6178,7 @@ export default function BiglietteriaPage() {
                         Total Neto
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatCurrencyDisplay(viewingDetails.netoPrincipal)}
+                        €{viewingDetails.netoPrincipal.toFixed(2)}
                       </p>
                     </div>
                     <div>
@@ -6200,7 +6186,7 @@ export default function BiglietteriaPage() {
                         Total Venduto
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatCurrencyDisplay(viewingDetails.vendutoTotal)}
+                        €{viewingDetails.vendutoTotal.toFixed(2)}
                       </p>
                     </div>
                     <div>
@@ -6208,7 +6194,7 @@ export default function BiglietteriaPage() {
                         Pagato / Acconto
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatCurrencyDisplay(viewingDetails.acconto)}
+                        €{viewingDetails.acconto.toFixed(2)}
                       </p>
                     </div>
                     <div>
@@ -6216,7 +6202,7 @@ export default function BiglietteriaPage() {
                         Da pagare
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatCurrencyDisplay(viewingDetails.daPagare)}
+                        €{viewingDetails.daPagare.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -6227,7 +6213,7 @@ export default function BiglietteriaPage() {
                         Fee / AGV
                       </p>
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatCurrencyDisplay(viewingDetails.feeAgv)}
+                        €{viewingDetails.feeAgv.toFixed(2)}
                       </p>
                     </div>
                     <div>
@@ -6378,14 +6364,16 @@ export default function BiglietteriaPage() {
                                             )}
                                           </td>
                                           <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
-                                            {formatCurrencyDisplay(
-                                              detalle.neto ?? null,
-                                            )}
+                                            {detalle.neto != null &&
+                                            detalle.neto !== ""
+                                              ? `€${Number(detalle.neto).toFixed(2)}`
+                                              : "-"}
                                           </td>
                                           <td className="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
-                                            {formatCurrencyDisplay(
-                                              detalle.venduto ?? null,
-                                            )}
+                                            {detalle.venduto != null &&
+                                            detalle.venduto !== ""
+                                              ? `€${Number(detalle.venduto).toFixed(2)}`
+                                              : "-"}
                                           </td>
                                           <td className="px-3 py-2 text-center">
                                             <span
@@ -6460,7 +6448,7 @@ export default function BiglietteriaPage() {
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="text-sm font-bold text-green-700 dark:text-green-300">
-                                  {formatCurrencyDisplay(cuota.prezzo)}
+                                  €{cuota.prezzo.toFixed(2)}
                                 </span>
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-xs font-semibold ${className}`}
