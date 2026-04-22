@@ -17,16 +17,7 @@ import PassengerDetailsTableSimple from "@/components/PassengerDetailsTableSimpl
 import SimpleRichTextEditor from "@/components/form/SimpleRichTextEditor";
 import * as XLSX from "xlsx";
 import { cachedFetch, getCachedData } from "@/utils/cachedFetch";
-
-/** Solo riga TOTALI Biglietteria: numeri → es. 65.526,20 € */
-function formatEuroTotaleBiglietteria(n: number): string {
-  if (typeof n !== "number" || Number.isNaN(n)) return "-";
-  const sign = n < 0 ? "-" : "";
-  const abs = Math.abs(n);
-  const [intRaw, frac = "00"] = abs.toFixed(2).split(".");
-  const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${sign}${intPart},${frac} €`;
-}
+import { formatEuroTotaleBiglietteria } from "@/lib/format-euro-totale-biglietteria";
 
 // ==================== INTERFACES ====================
 
@@ -2088,24 +2079,28 @@ export default function BiglietteriaPage() {
 
   // Calcular totales de las columnas NETO, VENDUTO, PAGATO/ACCONTO, DAPAGARE y FEE/AGV
   const totales = useMemo(() => {
+    const n = (v: unknown) => {
+      const x = Number(v);
+      return Number.isFinite(x) ? x : 0;
+    };
     const totalNeto = filteredRecords.reduce(
-      (sum, record) => sum + (record.netoPrincipal || 0),
+      (sum, record) => sum + n(record.netoPrincipal),
       0,
     );
     const totalVenduto = filteredRecords.reduce(
-      (sum, record) => sum + (record.vendutoTotal || 0),
+      (sum, record) => sum + n(record.vendutoTotal),
       0,
     );
     const totalAcconto = filteredRecords.reduce(
-      (sum, record) => sum + (record.acconto || 0),
+      (sum, record) => sum + n(record.acconto),
       0,
     );
     const totalDaPagare = filteredRecords.reduce(
-      (sum, record) => sum + (record.daPagare || 0),
+      (sum, record) => sum + n(record.daPagare),
       0,
     );
     const totalFeeAgv = filteredRecords.reduce(
-      (sum, record) => sum + (record.feeAgv || 0),
+      (sum, record) => sum + n(record.feeAgv),
       0,
     );
 
@@ -3755,9 +3750,12 @@ export default function BiglietteriaPage() {
                 ))
               )}
 
-              {/* Fila de Total */}
+              {/* Fila de Total — importi formattati it-IT (65.526,20 €) */}
               {currentData.length > 0 && (
-                <tr className="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-700">
+                <tr
+                  data-biglietteria-totals="1"
+                  className="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-700"
+                >
                   <td
                     colSpan={5}
                     className="px-6 py-4 text-right font-semibold text-blue-800 dark:text-blue-200 text-sm"
@@ -3765,16 +3763,16 @@ export default function BiglietteriaPage() {
                     TOTAL:
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatEuroTotaleBiglietteria(Number(totales.totalNeto))}
+                    {formatEuroTotaleBiglietteria(totales.totalNeto)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatEuroTotaleBiglietteria(Number(totales.totalVenduto))}
+                    {formatEuroTotaleBiglietteria(totales.totalVenduto)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatEuroTotaleBiglietteria(Number(totales.totalAcconto))}
+                    {formatEuroTotaleBiglietteria(totales.totalAcconto)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatEuroTotaleBiglietteria(Number(totales.totalDaPagare))}
+                    {formatEuroTotaleBiglietteria(totales.totalDaPagare)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     -
@@ -3783,7 +3781,7 @@ export default function BiglietteriaPage() {
                     -
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
-                    {formatEuroTotaleBiglietteria(Number(totales.totalFeeAgv))}
+                    {formatEuroTotaleBiglietteria(totales.totalFeeAgv)}
                   </td>
                   <td
                     colSpan={3}
