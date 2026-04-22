@@ -735,23 +735,29 @@ export default function BiglietteriaPage() {
     return servicios.filter((s) => !esServicioConocido(s));
   };
 
-  const euroFormatter = new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-  });
-
+  /** Italiano: migliaia con punto, decimali con virgola, simbolo in coda (es. 65.526,20 €).
+   *  Non usiamo solo Intl perché su alcuni browser/OS l’EUR può ancora uscire come €65526.20. */
   const formatCurrencyDisplay = (
     value: number | string | null | undefined,
   ): string => {
     if (value === null || value === undefined || value === "") {
       return "-";
     }
-    const numericValue = typeof value === "string" ? Number(value) : value;
-    if (Number.isNaN(numericValue)) {
+    let n: number;
+    if (typeof value === "string") {
+      const t = value.trim().replace(/\s/g, "").replace(",", ".");
+      n = Number(t);
+    } else {
+      n = value;
+    }
+    if (Number.isNaN(n)) {
       return "-";
     }
-    return euroFormatter.format(numericValue);
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    const [intRaw, frac = "00"] = abs.toFixed(2).split(".");
+    const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${sign}${intPart},${frac} €`;
   };
 
   const formatDateDisplay = (
