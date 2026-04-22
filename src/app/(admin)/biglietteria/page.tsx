@@ -3486,17 +3486,17 @@ export default function BiglietteriaPage() {
                     <td className="w-[120px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate">
                       {record.itinerario}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
-                      €{record.netoPrincipal.toFixed(2)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
+                      {formatCurrencyDisplay(record.netoPrincipal)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
-                      €{record.vendutoTotal.toFixed(2)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
+                      {formatCurrencyDisplay(record.vendutoTotal)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
-                      €{record.acconto.toFixed(2)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
+                      {formatCurrencyDisplay(record.acconto)}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
-                      €{record.daPagare.toFixed(2)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
+                      {formatCurrencyDisplay(record.daPagare)}
                     </td>
                     <td className="w-[100px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate">
                       {(() => {
@@ -3623,8 +3623,8 @@ export default function BiglietteriaPage() {
                         </div>
                       )}
                     </td>
-                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 font-mono truncate">
-                      €{record.feeAgv.toFixed(2)}
+                    <td className="w-[80px] px-3 py-2 text-gray-600 text-start text-xs dark:text-gray-300 truncate tabular-nums">
+                      {formatCurrencyDisplay(record.feeAgv)}
                     </td>
 
                     {/* Columna Files */}
@@ -3772,26 +3772,26 @@ export default function BiglietteriaPage() {
                   >
                     TOTAL:
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    €{totales.totalNeto.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
+                    {formatCurrencyDisplay(totales.totalNeto)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    €{totales.totalVenduto.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
+                    {formatCurrencyDisplay(totales.totalVenduto)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    €{totales.totalAcconto.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
+                    {formatCurrencyDisplay(totales.totalAcconto)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    €{totales.totalDaPagare.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                    -
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
+                    {formatCurrencyDisplay(totales.totalDaPagare)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     -
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    €{totales.totalFeeAgv.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-800 dark:text-blue-200 tabular-nums">
+                    {formatCurrencyDisplay(totales.totalFeeAgv)}
                   </td>
                   <td
                     colSpan={3}
@@ -5441,9 +5441,9 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={`€${formData.netoPrincipal}`}
+                      value={formatCurrencyDisplay(formData.netoPrincipal)}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
                   </div>
 
@@ -5453,9 +5453,9 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={`€${formData.vendutoTotal}`}
+                      value={formatCurrencyDisplay(formData.vendutoTotal)}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
                   </div>
 
@@ -5483,9 +5483,9 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={`€${formData.daPagare}`}
+                      value={formatCurrencyDisplay(formData.daPagare)}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
                   </div>
                 </div>
@@ -5497,9 +5497,9 @@ export default function BiglietteriaPage() {
                     </label>
                     <input
                       type="text"
-                      value={`€${formData.feeAgv}`}
+                      value={formatCurrencyDisplay(formData.feeAgv)}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold tabular-nums"
                     />
                   </div>
 
