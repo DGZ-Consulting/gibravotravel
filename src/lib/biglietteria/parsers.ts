@@ -468,6 +468,42 @@ export const buildPasajeroCreateInput = (
   const serviciosDetalleFinal =
     serviciosDetalleFormulario.length > 0 ? serviciosDetalleFormulario : serviciosDetalleCompat;
 
+  // Alinear backend con el cálculo del frontend:
+  // si existen servicios adicionales "dinámicos" en serviciosData, deben contribuir siempre
+  // a neto/venduto (aunque el nombre del servicio no esté en `serviciosSeleccionados`).
+  const existingKeys = new Set(
+    serviciosDetalleFinal.map((detalle) => detalle.servicio.trim().toLowerCase())
+  );
+  serviciosDataMap.forEach((data, key) => {
+    const normalizedKey = key.trim().toLowerCase();
+    if (existingKeys.has(normalizedKey)) {
+      return;
+    }
+    if (
+      data.iata === null &&
+      data.neto === null &&
+      data.venduto === null &&
+      (!data.metodoDiAcquisto || data.metodoDiAcquisto.length === 0)
+    ) {
+      return;
+    }
+
+    serviciosDetalleFinal.push({
+      servicio: key,
+      metodoDiAcquisto: data.metodoDiAcquisto ?? null,
+      andata,
+      ritorno,
+      iata: data.iata ?? null,
+      neto: data.neto ?? 0,
+      venduto: data.venduto ?? 0,
+      estado,
+      fechaPago,
+      fechaActivacion,
+      notas,
+    });
+    existingKeys.add(normalizedKey);
+  });
+
   const serviciosDetalleCreate = serviciosDetalleFinal.map((detalle) => ({
     servicio: detalle.servicio,
     metodoDiAcquisto: detalle.metodoDiAcquisto,
