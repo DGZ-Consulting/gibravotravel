@@ -16,7 +16,11 @@ import PassengerDetailsTable from "@/components/PassengerDetailsTable";
 import PassengerDetailsTableSimple from "@/components/PassengerDetailsTableSimple";
 import SimpleRichTextEditor from "@/components/form/SimpleRichTextEditor";
 import * as XLSX from "xlsx";
-import { cachedFetch, getCachedData } from "@/utils/cachedFetch";
+import {
+  cachedFetch,
+  getCachedData,
+  invalidateCacheByPrefix,
+} from "@/utils/cachedFetch";
 import { formatEuroTotaleBiglietteria } from "@/lib/format-euro-totale-biglietteria";
 
 // ==================== INTERFACES ====================
@@ -653,6 +657,7 @@ export default function BiglietteriaPage() {
   // Estado para control de carga de cuotas en edición - REPLICANDO TOUR GRUPPO
   const [isLoadingCuotas, setIsLoadingCuotas] = useState(false);
   const cuotasInicializadas = useRef(false);
+  const latestFetchIdRef = useRef<number>(0);
 
   // Resetear cuotas cuando se abre el modal en modo nuevo registro
   useEffect(() => {
@@ -1208,6 +1213,9 @@ export default function BiglietteriaPage() {
   // Cargar datos iniciales - OPTIMIZADO: Mostrar datos del caché inmediatamente
   const fetchData = useCallback(async () => {
     if (roleLoading) return;
+    // Evitar que respuestas viejas (caché/background) pisen el estado más reciente
+    const fetchId = Date.now();
+    latestFetchIdRef.current = fetchId;
     try {
       // OPTIMIZACIÓN: Primero verificar si hay datos en caché
       // Si hay datos en caché, mostrarlos inmediatamente sin loading
@@ -1255,6 +1263,7 @@ export default function BiglietteriaPage() {
         cachedAcquisto;
 
       if (hasAllCachedData) {
+        if (latestFetchIdRef.current !== fetchId) return;
         // Mostrar datos del caché inmediatamente (sin loading)
         const processedRecords = (cachedRecords.records ?? []).map(
           processRecord,
@@ -1344,6 +1353,7 @@ export default function BiglietteriaPage() {
         }).catch(() => ({ acquisti: [] })),
       ]);
 
+      if (latestFetchIdRef.current !== fetchId) return;
       // Procesar registros y pre-parsear metodoPagamento para evitar JSON.parse en filtro
       const processedRecords = (recordsData?.records ?? []).map(processRecord);
       setRecords(processedRecords);
@@ -2248,6 +2258,9 @@ export default function BiglietteriaPage() {
             r.id === updatedRecord.id ? processRecord(updatedRecord) : r,
           ),
         );
+        // Evitar que el caché/requests en vuelo repinten valores viejos del listado
+        latestFetchIdRef.current = Date.now();
+        invalidateCacheByPrefix("/api/biglietteria");
         setMessage({
           type: "success",
           text: "Registro actualizado correctamente",
@@ -2263,6 +2276,8 @@ export default function BiglietteriaPage() {
         setMessage({ type: "success", text: "Registro creado correctamente" });
 
         // Limpiar formulario y cerrar modal
+        latestFetchIdRef.current = Date.now();
+        invalidateCacheByPrefix("/api/biglietteria");
         handleCancelEdit();
       }
     } catch (error: unknown) {
