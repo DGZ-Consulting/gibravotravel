@@ -471,20 +471,33 @@ export const buildPasajeroCreateInput = (
   // Alinear backend con el cálculo del frontend:
   // si existen servicios adicionales "dinámicos" en serviciosData, deben contribuir siempre
   // a neto/venduto (aunque el nombre del servicio no esté en `serviciosSeleccionados`).
-  const existingKeys = new Set(
-    serviciosDetalleFinal.map((detalle) => detalle.servicio.trim().toLowerCase())
-  );
+  const detailIndexByKey = new Map<string, number>();
+  serviciosDetalleFinal.forEach((detalle, idx) => {
+    detailIndexByKey.set(detalle.servicio.trim().toLowerCase(), idx);
+  });
   serviciosDataMap.forEach((data, key) => {
     const normalizedKey = key.trim().toLowerCase();
-    if (existingKeys.has(normalizedKey)) {
-      return;
-    }
+    const existingIdx = detailIndexByKey.get(normalizedKey);
     if (
       data.iata === null &&
       data.neto === null &&
       data.venduto === null &&
       (!data.metodoDiAcquisto || data.metodoDiAcquisto.length === 0)
     ) {
+      return;
+    }
+
+    // Si ya existe un detalle con ese nombre (p.ej. viene desde serviciosDetalle),
+    // lo actualizamos con los valores de serviciosData para evitar totales desfasados.
+    if (existingIdx !== undefined) {
+      const current = serviciosDetalleFinal[existingIdx];
+      serviciosDetalleFinal[existingIdx] = {
+        ...current,
+        iata: data.iata ?? current.iata,
+        neto: data.neto ?? current.neto,
+        venduto: data.venduto ?? current.venduto,
+        metodoDiAcquisto: data.metodoDiAcquisto ?? current.metodoDiAcquisto,
+      };
       return;
     }
 
@@ -501,7 +514,7 @@ export const buildPasajeroCreateInput = (
       fechaActivacion,
       notas,
     });
-    existingKeys.add(normalizedKey);
+    detailIndexByKey.set(normalizedKey, serviciosDetalleFinal.length - 1);
   });
 
   const serviciosDetalleCreate = serviciosDetalleFinal.map((detalle) => ({
