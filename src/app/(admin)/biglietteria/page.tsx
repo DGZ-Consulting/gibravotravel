@@ -2190,7 +2190,16 @@ export default function BiglietteriaPage() {
       });
 
       // Agregar pasajeros como JSON
-      dataToSend.append("pasajeros", JSON.stringify(formData.pasajeros));
+      // IMPORTANTE: no enviar `serviciosDetalle` al backend en edición.
+      // En registros existentes puede venir desfasado y el backend lo prioriza,
+      // causando netoPrincipal viejo aunque serviciosData tenga el valor correcto.
+      const pasajerosToSend = formData.pasajeros.map((p) => {
+        const { serviciosDetalle, ...rest } = p as PasajeroData & {
+          serviciosDetalle?: unknown;
+        };
+        return rest;
+      });
+      dataToSend.append("pasajeros", JSON.stringify(pasajerosToSend));
 
       // Agregar archivo si existe
       if (selectedFile) {

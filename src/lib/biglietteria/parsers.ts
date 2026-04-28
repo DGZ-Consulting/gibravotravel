@@ -468,15 +468,115 @@ export const buildPasajeroCreateInput = (
   const serviciosDetalleFinal =
     serviciosDetalleFormulario.length > 0 ? serviciosDetalleFormulario : serviciosDetalleCompat;
 
+  const normalizeServiceKey = (value: string): string =>
+    value
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+  const findDetailIndex = (matcher: (key: string) => boolean): number =>
+    serviciosDetalleFinal.findIndex((detalle) =>
+      matcher(normalizeServiceKey(detalle.servicio))
+    );
+
+  const upsertKnownService = (
+    serviceName: string,
+    matcher: (key: string) => boolean,
+    values: {
+      iata?: unknown;
+      neto?: unknown;
+      venduto?: unknown;
+      metodo?: unknown;
+    }
+  ) => {
+    const iata = toNullableString(values.iata);
+    const neto = toNumberOrNull(values.neto);
+    const venduto = toNumberOrNull(values.venduto);
+    const metodo = toNullableString(values.metodo);
+    if (iata === null && neto === null && venduto === null && metodo === null) {
+      return;
+    }
+
+    const idx = findDetailIndex(matcher);
+    if (idx >= 0) {
+      const current = serviciosDetalleFinal[idx];
+      serviciosDetalleFinal[idx] = {
+        ...current,
+        iata,
+        neto,
+        venduto,
+        metodoDiAcquisto: metodo,
+      };
+      return;
+    }
+
+    serviciosDetalleFinal.push({
+      servicio: serviceName,
+      metodoDiAcquisto: metodo,
+      andata,
+      ritorno,
+      iata,
+      neto,
+      venduto,
+      estado,
+      fechaPago,
+      fechaActivacion,
+      notas,
+    });
+  };
+
+  // Fuente de verdad para servicios conocidos: los campos planos del formulario.
+  // Esto evita que `serviciosDetalle` heredado desactualizado pisotee el recálculo.
+  upsertKnownService(
+    'VOLO',
+    (key) => key.includes('volo') || key.includes('biglietteria'),
+    {
+      iata: pasajero.iataBiglietteria ?? pasajero.iata,
+      neto: pasajero.netoBiglietteria,
+      venduto: pasajero.vendutoBiglietteria,
+      metodo: pasajero.metodoAcquistoBiglietteria,
+    }
+  );
+  upsertKnownService('EXPRESS', (key) => key.includes('express'), {
+    iata: pasajero.iataExpress,
+    neto: pasajero.netoExpress,
+    venduto: pasajero.vendutoExpress,
+    metodo: pasajero.metodoAcquistoExpress,
+  });
+  upsertKnownService('POLIZZA', (key) => key.includes('polizza'), {
+    iata: pasajero.iataPolizza,
+    neto: pasajero.netoPolizza,
+    venduto: pasajero.vendutoPolizza,
+    metodo: pasajero.metodoAcquistoPolizza,
+  });
+  upsertKnownService(
+    'L.INVITO',
+    (key) => key.includes('invito') || key.includes('lettera'),
+    {
+      iata: pasajero.iataLetteraInvito,
+      neto: pasajero.netoLetteraInvito,
+      venduto: pasajero.vendutoLetteraInvito,
+      metodo: pasajero.metodoAcquistoLetteraInvito,
+    }
+  );
+  upsertKnownService('HOTEL', (key) => key.includes('hotel'), {
+    iata: pasajero.iataHotel,
+    neto: pasajero.netoHotel,
+    venduto: pasajero.vendutoHotel,
+    metodo: pasajero.metodoAcquistoHotel,
+  });
+
   // Alinear backend con el cálculo del frontend:
   // si existen servicios adicionales "dinámicos" en serviciosData, deben contribuir siempre
   // a neto/venduto (aunque el nombre del servicio no esté en `serviciosSeleccionados`).
   const detailIndexByKey = new Map<string, number>();
   serviciosDetalleFinal.forEach((detalle, idx) => {
-    detailIndexByKey.set(detalle.servicio.trim().toLowerCase(), idx);
+    detailIndexByKey.set(normalizeServiceKey(detalle.servicio), idx);
   });
   serviciosDataMap.forEach((data, key) => {
-    const normalizedKey = key.trim().toLowerCase();
+    const normalizedKey = normalizeServiceKey(key);
     const existingIdx = detailIndexByKey.get(normalizedKey);
     if (
       data.iata === null &&
